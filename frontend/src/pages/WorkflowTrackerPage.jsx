@@ -28,9 +28,9 @@ function WorkflowCard({ menu }) {
                 </div>
                 <span className={clsx(
                     'text-xs font-semibold px-3 py-1.5 rounded-full',
-                    menu.currentStage >= 7 ? 'bg-accent-light text-primary' : 'bg-blue-100 text-blue-700'
+                    menu.currentStage >= 8 ? 'bg-accent-light text-primary' : 'bg-blue-100 text-blue-700'
                 )}>
-                    Tahap {menu.currentStage}/7
+                    Tahap {menu.currentStage}/8
                 </span>
             </div>
 
@@ -103,7 +103,7 @@ export default function WorkflowTrackerPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-xl font-bold text-gray-900">Workflow Tracker</h2>
-                    <p className="text-sm text-gray-400">Pantau progres setiap menu melalui 7 tahap alur kerja</p>
+                    <p className="text-sm text-gray-400">Pantau progres setiap menu melalui 8 tahap alur kerja</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">

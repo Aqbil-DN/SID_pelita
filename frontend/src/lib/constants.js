@@ -82,7 +82,7 @@ export const NAV_ITEMS = [
 
     // Supervisor
     { key: 'production-qc', label: 'Production & QC', path: '/production-qc', icon: 'ClipboardCheck', roles: [ROLES.SUPERVISOR] },
-    { key: 'beneficiary', label: 'Kelola Sekolah', path: '/beneficiary', icon: 'School', roles: [ROLES.SUPERVISOR] },
+    { key: 'beneficiary', label: 'Kelola Penerima Manfaat', path: '/beneficiary', icon: 'School', roles: [ROLES.SUPERVISOR] },
     { key: 'portion-planning', label: 'Portion Planning', path: '/portion-planning', icon: 'Calculator', roles: [ROLES.SUPERVISOR] },
     { key: 'cooking-timer', label: 'Cooking Timer', path: '/cooking-timer', icon: 'Timer', roles: [ROLES.SUPERVISOR] },
     { key: 'delivery-tracker', label: 'Delivery Tracker', path: '/delivery-tracker', icon: 'Truck', roles: [ROLES.SUPERVISOR] },
