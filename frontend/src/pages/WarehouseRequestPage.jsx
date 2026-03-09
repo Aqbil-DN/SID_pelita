@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { PackagePlus, Send, Clock } from 'lucide-react'
+import { PackagePlus, Send, Clock, PackageCheck } from 'lucide-react'
 import { toast } from 'react-toastify'
 import useAuthStore from '../store/authStore'
 import { DEMO_STOCK, UNITS } from '../lib/constants'
@@ -9,9 +9,14 @@ export default function WarehouseRequestPage() {
     const { user } = useAuthStore()
     const { register, handleSubmit, reset, formState: { errors } } = useForm()
     const [requests, setRequests] = useState([
-        { id: 1, item: 'Bawang Putih', qty: 5, unit: 'kg', description: 'Habis, butuh sebelum jam 10:00', status: 'pending', time: '06:30' },
-        { id: 2, item: 'Santan Kelapa', qty: 10, unit: 'liter', description: 'Untuk produksi siang', status: 'fulfilled', time: '07:00' },
+        { id: 1, item: 'Bawang Putih', qty: 5, unit: 'kg', description: 'Habis, butuh sebelum jam 10:00', status: 'pending', time: '06:30', arrivedConfirmed: false },
+        { id: 2, item: 'Santan Kelapa', qty: 10, unit: 'liter', description: 'Untuk produksi siang', status: 'fulfilled', time: '07:00', arrivedConfirmed: false },
     ])
+
+    const confirmArrival = (id) => {
+        setRequests(prev => prev.map(r => r.id === id ? { ...r, arrivedConfirmed: true } : r))
+        toast.success('Barang dikonfirmasi telah tiba!')
+    }
 
     const onSubmit = (data) => {
         setRequests(prev => [{
@@ -84,6 +89,17 @@ export default function WarehouseRequestPage() {
                                     <p className="text-xs text-secondary font-semibold mt-1">{req.qty} {req.unit}</p>
                                     {req.description && <p className="text-xs text-tertiary/60 mt-1">{req.description}</p>}
                                     <p className="text-[10px] text-tertiary/40 mt-1 flex items-center gap-1"><Clock size={10} /> {req.time}</p>
+                                    {req.status === 'fulfilled' && (
+                                        req.arrivedConfirmed ? (
+                                            <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold px-2 py-1 rounded-full" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>
+                                                <PackageCheck size={11} /> Barang Diterima
+                                            </span>
+                                        ) : (
+                                            <button onClick={() => confirmArrival(req.id)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white transition-all hover:opacity-80" style={{ backgroundColor: '#327169' }}>
+                                                <PackageCheck size={13} /> Item Arrived
+                                            </button>
+                                        )
+                                    )}
                                 </div>
                             ))}
                         </div>

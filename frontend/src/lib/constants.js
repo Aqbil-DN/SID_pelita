@@ -8,6 +8,7 @@ export const ROLES = {
     SCD: 'SCD',
     WAREHOUSE: 'Warehouse',
     SUPERVISOR: 'Supervisor',
+    CPCD: 'CPCD',
 }
 
 export const WORKFLOW_STAGES = [
@@ -46,13 +47,28 @@ export const QUALITY_LEGEND = [
 ]
 
 export const COOKING_TIMER_SLOTS = [
+    { key: 'prepare_cooking', label: 'Prepare Cooking', defaultStart: '02:00', defaultEnd: '03:00', color: '#7c3aed' },
     { key: 'cooking', label: 'Cooking', defaultStart: '03:00', defaultEnd: '05:00', color: '#dc2626' },
     { key: 'resting', label: 'Resting', defaultStart: '05:00', defaultEnd: '05:30', color: '#2563eb' },
     { key: 'portioning', label: 'Portioning', defaultStart: '05:30', defaultEnd: '06:30', color: '#ca8a04' },
     { key: 'packaging', label: 'Packaging', defaultStart: '06:30', defaultEnd: '07:30', color: '#16a34a' },
 ]
 
+export const DELIVERY_STATUSES = [
+    { key: 'loading', label: 'Loading', color: '#7c3aed', bg: '#f5f3ff' },
+    { key: 'on_delivery', label: 'On Delivery', color: '#ca8a04', bg: '#fefce8' },
+    { key: 'arrived', label: 'Arrived', color: '#16a34a', bg: '#dcfce7' },
+    { key: 'pick_up', label: 'Pick Up', color: '#327169', bg: '#e0f2f2' },
+]
+
 export const UNITS = ['kg', 'gram', 'liter', 'ml', 'pcs', 'pack', 'box', 'sachet', 'botol', 'karung', 'butir', 'roll', 'gulung', 'lbr']
+
+export const STAFF_POSITIONS = [
+    'Head Chef', 'Sous Chef', 'Cook', 'Assistant Cook',
+    'Nutritionist', 'Supervisor', 'Warehouse Staff', 'Procurement Officer',
+    'Accountant', 'Quality Control', 'Delivery Driver', 'Kitchen Helper',
+    'Maintenance / CPCD', 'Admin', 'Lainnya',
+]
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
 
@@ -64,6 +80,7 @@ export const NAV_ITEMS = [
     // Nutritionist
     { key: 'menu-planning', label: 'Menu Planning', path: '/menu-planning', icon: 'UtensilsCrossed', roles: [ROLES.NUTRITIONIST] },
     { key: 'nutritionist-verify', label: 'Verifikasi Bahan', path: '/nutritionist-verify', icon: 'CheckSquare', roles: [ROLES.NUTRITIONIST] },
+    { key: 'recap-menu-verify', label: 'Recap Menu Verify', path: '/recap-menu-verify', icon: 'ClipboardList', roles: [ROLES.NUTRITIONIST] },
 
     // Head Chef
     { key: 'ingredient-mapping', label: 'Ingredient Mapping', path: '/ingredient-mapping', icon: 'ListChecks', roles: [ROLES.HEAD_CHEF] },
@@ -72,8 +89,10 @@ export const NAV_ITEMS = [
 
     // Accountant
     { key: 'financial-vetting', label: 'Financial Vetting', path: '/financial-vetting', icon: 'BadgeDollarSign', roles: [ROLES.ACCOUNTANT] },
+    { key: 'petty-cash-history', label: 'Petty Cash', path: '/petty-cash-history', icon: 'Wallet', roles: [ROLES.ACCOUNTANT] },
 
     // SCD
+    { key: 'vendor', label: 'Kelola Vendor', path: '/vendor', icon: 'Store', roles: [ROLES.SCD] },
     { key: 'procurement', label: 'Procurement', path: '/procurement', icon: 'ShoppingCart', roles: [ROLES.SCD] },
     { key: 'receipt-monitor', label: 'Receipt Monitor', path: '/receipt-monitor', icon: 'PackageSearch', roles: [ROLES.SCD] },
 
@@ -86,7 +105,11 @@ export const NAV_ITEMS = [
     { key: 'portion-planning', label: 'Portion Planning', path: '/portion-planning', icon: 'Calculator', roles: [ROLES.SUPERVISOR] },
     { key: 'cooking-timer', label: 'Cooking Timer', path: '/cooking-timer', icon: 'Timer', roles: [ROLES.SUPERVISOR] },
     { key: 'delivery-tracker', label: 'Delivery Tracker', path: '/delivery-tracker', icon: 'Truck', roles: [ROLES.SUPERVISOR] },
+    { key: 'petty-cash', label: 'Petty Cash', path: '/petty-cash', icon: 'Wallet', roles: [ROLES.SUPERVISOR] },
     { key: 'spv-warehouse-request', label: 'Request Gudang', path: '/spv-warehouse-request', icon: 'PackagePlus', roles: [ROLES.SUPERVISOR] },
+
+    // CPCD
+    { key: 'maintenance', label: 'Maintenance Scheduler', path: '/maintenance', icon: 'Wrench', roles: [ROLES.CPCD] },
 
     // Admin
     { key: 'reports', label: 'Reports', path: '/reports', icon: 'BarChart3', roles: [ROLES.ADMIN, ROLES.SUPERVISOR] },
@@ -111,13 +134,14 @@ import freyaImg from '../assets/freya.jpeg'
 import hanniImg from '../assets/hanni.jpeg'
 
 export const DEMO_USERS = [
-    { id: 1, name: 'Admin Sistem', nik: '2026001', password: 'admin123', role: ROLES.ADMIN, email: 'admin@sidapur.go.id', photo: user1Img },
-    { id: 2, name: 'Dr. Sari Nutrisi', nik: '2026002', password: 'pass123', role: ROLES.NUTRITIONIST, email: 'sari@sidapur.go.id', photo: zeeImg },
-    { id: 3, name: 'Chef Budi Santoso', nik: '2026003', password: 'pass123', role: ROLES.HEAD_CHEF, email: 'budi@sidapur.go.id', photo: danielImg },
-    { id: 4, name: 'Andi Keuangan', nik: '2026004', password: 'pass123', role: ROLES.ACCOUNTANT, email: 'andi@sidapur.go.id', photo: user2Img },
-    { id: 5, name: 'Rini Pengadaan', nik: '2026005', password: 'pass123', role: ROLES.SCD, email: 'rini@sidapur.go.id', photo: minjuImg },
-    { id: 6, name: 'Doni Gudang', nik: '2026006', password: 'pass123', role: ROLES.WAREHOUSE, email: 'doni@sidapur.go.id', photo: freyaImg },
-    { id: 7, name: 'Ibu Dewi SPV', nik: '2026007', password: 'pass123', role: ROLES.SUPERVISOR, email: 'dewi@sidapur.go.id', photo: hanniImg },
+    { id: 1, name: 'Admin Sistem', nik: '2026001', password: 'admin123', role: ROLES.ADMIN, email: 'admin@sidapur.go.id', photo: user1Img, ttl: 'Jakarta, 10 Jan 1985', position: 'Admin' },
+    { id: 2, name: 'Dr. Sari Nutrisi', nik: '2026002', password: 'pass123', role: ROLES.NUTRITIONIST, email: 'sari@sidapur.go.id', photo: zeeImg, ttl: 'Bandung, 22 Feb 1990', position: 'Nutritionist' },
+    { id: 3, name: 'Chef Budi Santoso', nik: '2026003', password: 'pass123', role: ROLES.HEAD_CHEF, email: 'budi@sidapur.go.id', photo: danielImg, ttl: 'Surabaya, 5 Mei 1988', position: 'Head Chef' },
+    { id: 4, name: 'Andi Keuangan', nik: '2026004', password: 'pass123', role: ROLES.ACCOUNTANT, email: 'andi@sidapur.go.id', photo: user2Img, ttl: 'Yogyakarta, 18 Jul 1992', position: 'Accountant' },
+    { id: 5, name: 'Rini Pengadaan', nik: '2026005', password: 'pass123', role: ROLES.SCD, email: 'rini@sidapur.go.id', photo: minjuImg, ttl: 'Semarang, 3 Sep 1991', position: 'Procurement Officer' },
+    { id: 6, name: 'Doni Gudang', nik: '2026006', password: 'pass123', role: ROLES.WAREHOUSE, email: 'doni@sidapur.go.id', photo: freyaImg, ttl: 'Jakarta, 12 Okt 1993', position: 'Warehouse Staff' },
+    { id: 7, name: 'Ibu Dewi SPV', nik: '2026007', password: 'pass123', role: ROLES.SUPERVISOR, email: 'dewi@sidapur.go.id', photo: hanniImg, ttl: 'Depok, 28 Nov 1989', position: 'Supervisor' },
+    { id: 8, name: 'Fajar Teknik CPCD', nik: '2026008', password: 'pass123', role: ROLES.CPCD, email: 'fajar@sidapur.go.id', photo: user1Img, ttl: 'Tangerang, 1 Des 1994', position: 'Maintenance / CPCD' },
 ]
 
 // ─── Demo Schools / Beneficiaries ────────────────────────────────────────────
@@ -152,6 +176,7 @@ export const DEMO_MENUS = [
         name: 'Menu Nasi Ayam Spesial',
         description: 'Nasi putih dengan ayam goreng bumbu kuning, sayur asem, dan sambal terasi.',
         targetDate: '2026-03-05',
+        beneficiaryId: 1,
         calories: 650,
         currentStage: 6,
         status: 'in_progress',
@@ -188,6 +213,7 @@ export const DEMO_MENUS = [
         name: 'Menu Sop Sayur Bergizi',
         description: 'Sop sayur dengan wortel, kentang, buncis, dan daging sapi. Dilengkapi nasi putih.',
         targetDate: '2026-03-07',
+        beneficiaryId: 4,
         calories: 450,
         currentStage: 4,
         status: 'in_progress',
@@ -219,6 +245,7 @@ export const DEMO_MENUS = [
         name: 'Paket Makan Siang Ikan Bakar',
         description: 'Ikan lele bakar dengan sambal matah, lalapan, dan nasi merah.',
         targetDate: '2026-03-10',
+        beneficiaryId: 6,
         calories: 580,
         currentStage: 1,
         status: 'in_progress',
@@ -278,9 +305,20 @@ export const DEMO_STOCK = [
 // ─── Demo Delivery Status ────────────────────────────────────────────────────
 
 export const DEMO_DELIVERIES = [
-    { id: 1, schoolId: 1, menuId: 1, date: '2026-03-05', status: 'in_transit', progress: 60 },
-    { id: 2, schoolId: 2, menuId: 1, date: '2026-03-05', status: 'in_transit', progress: 45 },
+    { id: 1, schoolId: 1, menuId: 1, date: '2026-03-05', status: 'on_delivery', progress: 60 },
+    { id: 2, schoolId: 2, menuId: 1, date: '2026-03-05', status: 'loading', progress: 20 },
     { id: 3, schoolId: 3, menuId: 1, date: '2026-03-05', status: 'arrived', progress: 100 },
+]
+
+// ─── Demo Process per Beneficiary (PM) ───────────────────────────────────────
+
+export const DEMO_PROCESS_PM = [
+    { id: 1, name: 'SDN 001 Merdeka', date: '2026-03-05', estimatedArrival: '07:30', description: 'Pengiriman pagi — rute via Jl. Merdeka', portionCount: 350 },
+    { id: 2, name: 'SDN 002 Pahlawan', date: '2026-03-05', estimatedArrival: '08:00', description: 'Pengiriman reguler — tidak ada kendala', portionCount: 280 },
+    { id: 3, name: 'SDN 003 Bangsa', date: '2026-03-05', estimatedArrival: '08:30', description: 'Jalan sedang diperbaiki, estimasi mundur 15 menit', portionCount: 300 },
+    { id: 4, name: 'SDN 004 Nusantara', date: '2026-03-07', estimatedArrival: '07:45', description: 'Pengiriman jadwal PM Tambahan', portionCount: 200 },
+    { id: 5, name: 'SDN 005 Pancasila', date: '2026-03-07', estimatedArrival: '08:15', description: 'Koordinasi dengan pihak sekolah H-1', portionCount: 150 },
+    { id: 6, name: 'MI Al-Ikhlas', date: '2026-03-10', estimatedArrival: '07:00', description: 'Pengiriman pertama untuk bulan ini', portionCount: 320 },
 ]
 
 // ─── Demo Broadcast Messages ─────────────────────────────────────────────────

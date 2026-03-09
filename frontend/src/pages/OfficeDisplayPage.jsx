@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LogOut, Package } from 'lucide-react'
-import { DEMO_STOCK, DEMO_PERSONNEL, DEMO_SCHOOLS, DEMO_DELIVERIES, PRODUCTION_STAGES } from '../lib/constants'
+import { DEMO_STOCK, DEMO_PERSONNEL, DELIVERY_STATUSES } from '../lib/constants'
 import useBroadcastStore from '../store/broadcastStore'
+import useDeliveryStore from '../store/deliveryStore'
 
 function VerticalMarquee({ items, renderItem, speed = 30 }) {
     if (!items || items.length === 0) return null
@@ -32,9 +33,9 @@ export default function OfficeDisplayPage() {
     const navigate = useNavigate()
     const [showExit, setShowExit] = useState(false)
     const { getActiveMessages } = useBroadcastStore()
+    const { deliveries } = useDeliveryStore()
 
     const broadcasts = getActiveMessages()
-    const deliveries = DEMO_DELIVERIES.map(d => ({ ...d, school: DEMO_SCHOOLS.find(s => s.id === d.schoolId) }))
 
     // Group personnel by division
     const divisionCounts = {}
@@ -122,37 +123,29 @@ export default function OfficeDisplayPage() {
                             <p className="text-white font-bold text-sm">Delivery Status per Sekolah</p>
                         </div>
                         <div className="flex-1 overflow-auto p-4">
-                            {deliveries.map(d => (
+                            {deliveries.map(d => {
+                                const statusIdx = DELIVERY_STATUSES.findIndex(s => s.key === d.status)
+                                const currentStatus = DELIVERY_STATUSES[statusIdx] || DELIVERY_STATUSES[0]
+                                return (
                                 <div key={d.id} className="mb-4 last:mb-0">
                                     <div className="flex items-center justify-between mb-1.5">
                                         <p className="font-bold text-sm" style={{ color: '#327169' }}>{d.school?.name}</p>
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{
-                                            backgroundColor: d.progress === 100 ? '#dcfce7' : '#fef9c3',
-                                            color: d.progress === 100 ? '#16a34a' : '#ca8a04'
-                                        }}>
-                                            {d.progress === 100 ? 'Arrived' : 'In Transit'}
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: currentStatus.bg, color: currentStatus.color }}>
+                                            {currentStatus.label}
                                         </span>
                                     </div>
-                                    {/* 5-stage progress */}
+                                    {/* 4-step delivery status */}
                                     <div className="flex gap-1">
-                                        {['Prep', 'Cook', 'Rest', 'Portion', 'Ship'].map((label, idx) => {
-                                            const stageProgress = Math.min(100, Math.max(0, (d.progress - idx * 20) * 5))
-                                            return (
-                                                <div key={label} className="flex-1">
-                                                    <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                                                        <div className="h-3 rounded-full transition-all" style={{
-                                                            width: `${stageProgress}%`,
-                                                            backgroundColor: stageProgress === 100 ? '#16a34a' : '#327169'
-                                                        }} />
-                                                    </div>
-                                                    <p className="text-[8px] font-semibold mt-0.5 text-center text-gray-400">{label}</p>
-                                                </div>
-                                            )
-                                        })}
+                                        {DELIVERY_STATUSES.map((s, idx) => (
+                                            <div key={s.key} className="flex-1">
+                                                <div className="h-3 rounded-full" style={{ backgroundColor: idx <= statusIdx ? s.color : '#e5e7eb' }} />
+                                                <p className="text-[8px] font-semibold mt-0.5 text-center" style={{ color: idx <= statusIdx ? s.color : '#9ca3af' }}>{s.label}</p>
+                                            </div>
+                                        ))}
                                     </div>
-                                    <p className="text-right text-[10px] font-bold mt-0.5" style={{ color: d.progress === 100 ? '#16a34a' : '#327169' }}>{d.progress}%</p>
                                 </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     </div>
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { CheckSquare, Check, X, Eye, AlertCircle } from 'lucide-react'
+import { CheckSquare, Check, X, Eye, AlertCircle, Flame } from 'lucide-react'
 import { toast } from 'react-toastify'
 import useAuthStore from '../store/authStore'
 import useWorkflowStore from '../store/workflowStore'
@@ -7,10 +7,11 @@ import clsx from 'clsx'
 
 export default function NutritionistVerificationPage() {
     const { user } = useAuthStore()
-    const { menus, verifyStage, ignoreStage } = useWorkflowStore()
+    const { menus, verifyStage, ignoreStage, setIngredients } = useWorkflowStore()
     const [selectedMenu, setSelectedMenu] = useState(null)
     const [rejectReason, setRejectReason] = useState('')
     const [showRejectModal, setShowRejectModal] = useState(false)
+    const [calorieInputs, setCalorieInputs] = useState({})
 
     // Menus awaiting nutritionist review (after HC mapped ingredients)
     const pendingMenus = menus.filter(m => m.stages.nutritionist_review?.status === 'active')
@@ -19,9 +20,19 @@ export default function NutritionistVerificationPage() {
     )
 
     const handleVerify = (menuId) => {
+        // Persist calorie values onto ingredients
+        const menu = menus.find(m => m.id === menuId)
+        if (menu) {
+            const updated = menu.ingredients.map((ing, i) => ({
+                ...ing,
+                calories: calorieInputs[i] !== undefined ? parseFloat(calorieInputs[i]) || 0 : (ing.calories || 0),
+            }))
+            setIngredients(menuId, updated)
+        }
         verifyStage(menuId, 'nutritionist_review', user.name)
         toast.success('Bahan diverifikasi! Data diteruskan ke Accountant.')
         setSelectedMenu(null)
+        setCalorieInputs({})
     }
 
     const handleIgnore = (menuId) => {
@@ -127,6 +138,7 @@ export default function NutritionistVerificationPage() {
                                             <th className="table-header">Bahan</th>
                                             <th className="table-header">Qty</th>
                                             <th className="table-header">Unit</th>
+                                            <th className="table-header"><span className="flex items-center gap-1"><Flame size={12} className="text-red-500" /> Kalori (kcal)</span></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -135,6 +147,16 @@ export default function NutritionistVerificationPage() {
                                                 <td className="table-cell font-semibold">{ing.name}</td>
                                                 <td className="table-cell text-primary font-bold">{ing.quantity}</td>
                                                 <td className="table-cell text-tertiary/60">{ing.unit}</td>
+                                                <td className="table-cell">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        placeholder="0"
+                                                        className="input-field text-sm w-24"
+                                                        value={calorieInputs[i] !== undefined ? calorieInputs[i] : (ing.calories || '')}
+                                                        onChange={e => setCalorieInputs(prev => ({ ...prev, [i]: e.target.value }))}
+                                                    />
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>

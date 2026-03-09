@@ -1,12 +1,17 @@
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { PackagePlus, Send, Clock, AlertTriangle } from 'lucide-react'
+import { PackagePlus, Send, Clock, AlertTriangle, PackageCheck } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { DEMO_STOCK } from '../lib/constants'
 
 export default function SpvWarehouseRequestPage() {
     const { register, handleSubmit, reset, formState: { errors } } = useForm()
     const [requests, setRequests] = useState([])
+
+    const confirmArrival = (id) => {
+        setRequests(prev => prev.map(r => r.id === id ? { ...r, arrivedConfirmed: true } : r))
+        toast.success('Barang dikonfirmasi telah tiba!')
+    }
 
     const onSubmit = (data) => {
         const stockItem = DEMO_STOCK.find(s => s.id === parseInt(data.stockId))
@@ -80,6 +85,17 @@ export default function SpvWarehouseRequestPage() {
                                     <p className="text-xs text-secondary font-semibold mt-1">{r.qty} {r.unit}</p>
                                     {r.description && <p className="text-xs text-tertiary/60 mt-1">{r.description}</p>}
                                     <p className="text-[10px] text-tertiary/40 mt-1 flex items-center gap-1"><Clock size={10} /> {r.time}</p>
+                                    {r.status === 'fulfilled' && (
+                                        r.arrivedConfirmed ? (
+                                            <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold px-2 py-1 rounded-full" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>
+                                                <PackageCheck size={11} /> Barang Diterima
+                                            </span>
+                                        ) : (
+                                            <button onClick={() => confirmArrival(r.id)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white transition-all hover:opacity-80" style={{ backgroundColor: '#327169' }}>
+                                                <PackageCheck size={13} /> Item Arrived
+                                            </button>
+                                        )
+                                    )}
                                 </div>
                             ))}
                         </div>

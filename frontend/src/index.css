@@ -263,6 +263,26 @@
   }
 }
 
+/* ── Print Styles (PO Document A4) ────────────────────────────────────── */
+@media print {
+  body * { visibility: hidden !important; }
+  .po-document, .po-document * { visibility: visible !important; }
+  .po-document {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 auto !important;
+    padding: 16mm 14mm !important;
+    background: #fff !important;
+    font-family: 'Plus Jakarta Sans', Arial, sans-serif !important;
+    font-size: 11pt !important;
+    color: #1f2937 !important;
+  }
+  .po-page-break { page-break-after: always !important; break-after: page !important; }
+  .no-print { display: none !important; }
+}
+
 /* ── Vertical Marquee Keyframe ─────────────────────────────────────────── */
 @keyframes marqueeVertical {
   0% {

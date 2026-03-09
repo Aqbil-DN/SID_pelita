@@ -1,15 +1,8 @@
 import React from 'react'
-import { LayoutDashboard, TrendingUp, Clock, Users, ChefHat, Truck, UtensilsCrossed } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Clock, Users, ChefHat, Truck, UtensilsCrossed, Calendar, MapPin } from 'lucide-react'
 import useAuthStore from '../store/authStore'
 import useWorkflowStore from '../store/workflowStore'
-import { WORKFLOW_STAGES, DEMO_SCHOOLS, DEMO_BENEFICIARIES, DEMO_STOCK, PRODUCTION_STAGES } from '../lib/constants'
-
-const stageIcons = {
-    planning: UtensilsCrossed,
-    ingredient_mapping: ChefHat,
-    production: LayoutDashboard,
-    distributed: Truck,
-}
+import { WORKFLOW_STAGES, DEMO_SCHOOLS, DEMO_BENEFICIARIES, DEMO_STOCK, DEMO_PROCESS_PM } from '../lib/constants'
 
 export default function DashboardPage() {
     const { user } = useAuthStore()
@@ -79,32 +72,60 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Active menus */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeMenus.map(menu => {
-                    const prod = PRODUCTION_STAGES.find(s => s.key === menu.productionStage)
-                    return (
-                        <div key={menu.id} className="card hover:shadow-lg transition-shadow">
-                            <div className="flex items-start justify-between mb-2">
-                                <div>
-                                    <p className="font-bold text-primary">{menu.name}</p>
-                                    <p className="text-xs text-tertiary/50">{menu.targetDate}</p>
-                                </div>
-                                <span className="badge-primary text-[10px]">Stage {menu.currentStage}</span>
-                            </div>
-                            {menu.description && <p className="text-xs text-tertiary/60 mb-3">{menu.description}</p>}
-                            <div className="flex gap-0.5 mb-2">
-                                {WORKFLOW_STAGES.map((_, i) => (
-                                    <div key={i} className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: i < menu.currentStage ? '#327169' : '#e5e7eb' }} />
-                                ))}
-                            </div>
-                            <div className="flex items-center justify-between mt-2">
-                                <span className="text-[10px] text-tertiary/50">{menu.ingredients.length} bahan</span>
-                                {prod && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: prod.color }}>{prod.label}</span>}
-                            </div>
-                        </div>
-                    )
-                })}
+            {/* Process per Beneficiary (PM) Table */}
+            <div className="card p-0 overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2" style={{ backgroundColor: 'rgba(50,113,105,0.05)' }}>
+                    <MapPin size={16} className="text-primary" />
+                    <h3 className="font-bold text-primary text-sm">Process per Beneficiary (PM)</h3>
+                    <span className="ml-auto badge-primary text-[10px]">{DEMO_PROCESS_PM.length} PM</span>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-gray-50 border-b border-gray-100">
+                                <th className="table-header">Nama PM</th>
+                                <th className="table-header flex items-center gap-1"><Calendar size={12} />Tanggal</th>
+                                <th className="table-header text-center">
+                                    <Clock size={12} className="inline mr-1" />Est. Kedatangan
+                                </th>
+                                <th className="table-header">Deskripsi</th>
+                                <th className="table-header text-center">Jumlah Porsi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {DEMO_PROCESS_PM.map((pm, i) => (
+                                <tr key={pm.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                    <td className="table-cell">
+                                        <p className="font-bold text-primary">{pm.name}</p>
+                                    </td>
+                                    <td className="table-cell text-tertiary/70">
+                                        {new Date(pm.date + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </td>
+                                    <td className="table-cell text-center">
+                                        <span className="font-bold text-sm" style={{ color: '#438c81', fontVariantNumeric: 'tabular-nums' }}>{pm.estimatedArrival}</span>
+                                    </td>
+                                    <td className="table-cell text-xs text-tertiary/60 max-w-[220px]">
+                                        <span className="line-clamp-2">{pm.description}</span>
+                                    </td>
+                                    <td className="table-cell text-center">
+                                        <span className="font-extrabold text-base" style={{ color: '#327169' }}>
+                                            {pm.portionCount.toLocaleString('id-ID')}
+                                        </span>
+                                        <span className="text-[10px] text-tertiary/40 ml-1">porsi</span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            <tr className="bg-gray-50 border-t border-gray-200">
+                                <td className="table-cell font-bold text-primary" colSpan={4}>Total Porsi</td>
+                                <td className="table-cell text-center font-extrabold text-lg" style={{ color: '#327169' }}>
+                                    {DEMO_PROCESS_PM.reduce((s, p) => s + p.portionCount, 0).toLocaleString('id-ID')}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
     )

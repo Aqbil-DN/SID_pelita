@@ -24,14 +24,14 @@ export default function PortionPlanningPage() {
         <div className="max-w-4xl mx-auto space-y-6">
             <div>
                 <h2 className="text-2xl font-extrabold text-primary flex items-center gap-2"><Calculator size={24} /> Portion Planning</h2>
-                <p className="text-sm text-tertiary/60 mt-1">Tentukan jumlah porsi per sekolah dan tanggal pengiriman</p>
+                <p className="text-sm text-tertiary/60 mt-1">Tentukan jumlah porsi per penerima manfaat dan tanggal pengiriman</p>
             </div>
 
             <div className="card">
                 <h3 className="font-bold text-primary text-sm mb-4">Tambah Rencana Porsi</h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <select value={form.schoolId} onChange={e => setForm({ ...form, schoolId: e.target.value })} className="input-field">
-                        <option value="">Pilih Sekolah</option>
+                        <option value="">Pilih Penerima Manfaat</option>
                         {DEMO_SCHOOLS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                     <input type="number" value={form.portionCount} onChange={e => setForm({ ...form, portionCount: e.target.value })} className="input-field" placeholder="Jumlah Porsi" />
@@ -43,7 +43,7 @@ export default function PortionPlanningPage() {
             <div className="card overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead><tr className="bg-gray-50">
-                        <th className="table-header">Sekolah</th>
+                        <th className="table-header">Penerima Manfaat</th>
                         <th className="table-header">Tipe</th>
                         <th className="table-header">Porsi</th>
                         <th className="table-header">Tanggal Kirim</th>

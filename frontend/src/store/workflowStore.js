@@ -21,6 +21,11 @@ const useWorkflowStore = create(
                     menus: [...s.menus, { ...menu, id: Date.now() }],
                 })),
 
+            deleteMenu: (id) =>
+                set((s) => ({
+                    menus: s.menus.filter((m) => m.id !== id),
+                })),
+
             updateMenu: (id, updates) =>
                 set((s) => ({
                     menus: s.menus.map((m) => (m.id === id ? { ...m, ...updates } : m)),

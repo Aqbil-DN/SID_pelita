@@ -456,8 +456,8 @@ export default function WarehouseDisplayPage() {
                     {/* ── Row 3: Urgent Requests ── */}
                     <div className="flex-1 min-h-0 grid grid-cols-3 gap-3">
                         <UrgentCard title="Kitchen Request" items={URGENT_REQUESTS.kitchen} accentColor="#b45309" />
-                        <UrgentCard title="Pemasaran" items={URGENT_REQUESTS.marketing} accentColor="#1d4ed8" />
-                        <UrgentCard title="Packaging" items={URGENT_REQUESTS.packaging} accentColor="#7c3aed" />
+                        <UrgentCard title="Pemorsian" items={URGENT_REQUESTS.marketing} accentColor="#1d4ed8" />
+                        <UrgentCard title="Pengemasan" items={URGENT_REQUESTS.packaging} accentColor="#7c3aed" />
                     </div>
                 </div>
             </div>
