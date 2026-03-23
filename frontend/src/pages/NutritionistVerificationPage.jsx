@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import {
     ChevronLeft, ChevronRight, FlaskConical, X, Check, AlertCircle,
-    ChevronRight as ArrowRight, AlertTriangle, CheckCircle2, Info,
+    ChevronRight as ArrowRight, AlertTriangle, CheckCircle2, Info, Clock,
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import useAuthStore from '../store/authStore'
 import useWorkflowStore from '../store/workflowStore'
+import ConfirmationModal from '../components/ConfirmationModal'
 
 // ─── Calendar Helpers ──────────────────────────────────────────────────────────
 
@@ -147,12 +148,45 @@ function buildEmptyFacts() {
     return facts
 }
 
+// ─── Status helpers ────────────────────────────────────────────────────────────
+// Returns 'untouched' | 'draft' | 'final'
+function getDateStatus(menusOnDate, draftDates, dateKey) {
+    if (!menusOnDate || menusOnDate.length === 0) return null
+    const allDone = menusOnDate.every(m => m.stages.nutritionist_review?.status === 'done')
+    if (allDone) return 'final'
+    if (draftDates.has(dateKey)) return 'draft'
+    return 'untouched'
+}
+
+function StatusBadge({ status, count }) {
+    if (status === 'final') return (
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 leading-tight flex items-center gap-0.5">
+            <Check size={8} /> {count} final
+        </span>
+    )
+    if (status === 'draft') return (
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 leading-tight flex items-center gap-0.5">
+            <Clock size={8} /> {count} draft
+        </span>
+    )
+    return (
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 leading-tight flex items-center gap-0.5">
+            <AlertCircle size={8} /> {count} belum
+        </span>
+    )
+}
+
 // ─── Calendar Cell ─────────────────────────────────────────────────────────────
 
-function CalendarCell({ day, dateKey, isToday, isCurrentMonth, menusOnDate, onClick }) {
-    const verifiedCount = menusOnDate.filter(m => m.stages.nutritionist_review?.status === 'done').length
-    const pendingCount = menusOnDate.length - verifiedCount - menusOnDate.filter(m => m.stages.nutritionist_review?.status === 'rejected').length
+function CalendarCell({ day, dateKey, isToday, isCurrentMonth, menusOnDate, draftDates, onClick }) {
     const hasContent = menusOnDate.length > 0
+    const status = getDateStatus(menusOnDate, draftDates, dateKey)
+
+    // Cell background per status
+    const cellBg = !hasContent || !isCurrentMonth ? ''
+        : status === 'final' ? 'bg-green-50 border-green-200'
+        : status === 'draft' ? 'bg-slate-50 border-slate-200'
+        : 'bg-amber-50 border-amber-200'
 
     return (
         <div
@@ -160,12 +194,14 @@ function CalendarCell({ day, dateKey, isToday, isCurrentMonth, menusOnDate, onCl
             className={[
                 'relative flex flex-col gap-0.5 rounded-xl p-1.5 min-h-[88px] transition-all duration-150 select-none border',
                 isCurrentMonth && hasContent
-                    ? 'cursor-pointer hover:shadow-md hover:border-[#438c81]'
-                    : isCurrentMonth ? 'cursor-default' : 'opacity-25 cursor-default',
-                isToday
+                    ? `cursor-pointer hover:shadow-md ${cellBg}`
+                    : isCurrentMonth ? 'cursor-default border-transparent bg-white'
+                    : 'opacity-25 cursor-default border-transparent bg-white',
+                isToday && !hasContent
                     ? 'border-[#a3c7c7] bg-[#a3c7c7]/20 ring-2 ring-[#a3c7c7]/50'
-                    : 'border-transparent bg-white hover:bg-[#f0fafa]',
-                hasContent && isCurrentMonth && !isToday ? 'bg-[#f7fdfd]' : '',
+                    : isToday && hasContent
+                    ? `ring-2 ring-[#a3c7c7]/50 ${cellBg}`
+                    : '',
             ].join(' ')}
         >
             <span className={[
@@ -174,18 +210,11 @@ function CalendarCell({ day, dateKey, isToday, isCurrentMonth, menusOnDate, onCl
             ].join(' ')}>
                 {day}
             </span>
-            <div className="flex flex-col gap-0.5 mt-0.5">
-                {pendingCount > 0 && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 leading-tight">
-                        {pendingCount} menunggu
-                    </span>
-                )}
-                {verifiedCount > 0 && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 leading-tight">
-                        {verifiedCount} terverifikasi
-                    </span>
-                )}
-            </div>
+            {hasContent && isCurrentMonth && status && (
+                <div className="flex flex-col gap-0.5 mt-0.5">
+                    <StatusBadge status={status} count={menusOnDate.length} />
+                </div>
+            )}
         </div>
     )
 }
@@ -237,7 +266,6 @@ function NutritionForm({ facts, onChange, onSave, onBack }) {
     }
 
     const handleSave = () => {
-        // Validate required tab (komponen)
         const reqTab = TABS.find(t => t.required)
         const missing = reqTab.fields.filter(f => !facts[reqTab.id]?.[f.key]?.toString().trim())
         if (missing.length > 0) {
@@ -332,7 +360,7 @@ function NutritionForm({ facts, onChange, onSave, onBack }) {
 
 // ─── Two-Step Modal ────────────────────────────────────────────────────────────
 
-function NutritionModal({ dateKey, menusOnDate, onClose }) {
+function NutritionModal({ dateKey, menusOnDate, onClose, onMarkDraft }) {
     const { user } = useAuthStore()
     const { verifyStage, ignoreStage, setNutritionFacts } = useWorkflowStore()
 
@@ -341,6 +369,7 @@ function NutritionModal({ dateKey, menusOnDate, onClose }) {
     const [showIgnoreForm, setShowIgnoreForm] = useState(false)
     const [ignoreReason, setIgnoreReason] = useState('')
     const [facts, setFacts] = useState(buildEmptyFacts())
+    const [showConfirm, setShowConfirm] = useState(false)
 
     const backdropRef = useRef(null)
 
@@ -352,13 +381,11 @@ function NutritionModal({ dateKey, menusOnDate, onClose }) {
 
     const handleBackdrop = e => { if (e.target === backdropRef.current) onClose() }
 
-    // Pending menus on this date
     const pendingMenus = menusOnDate.filter(m => m.stages.nutritionist_review?.status === 'active')
     const doneMenus = menusOnDate.filter(m => ['done', 'rejected'].includes(m.stages.nutritionist_review?.status))
 
     const handleSelectMenu = (menu) => {
         setSelectedMenu(menu)
-        // Pre-fill facts if already saved
         if (menu.nutritionFacts) {
             setFacts(menu.nutritionFacts)
         } else {
@@ -366,9 +393,17 @@ function NutritionModal({ dateKey, menusOnDate, onClose }) {
         }
         setShowIgnoreForm(false)
         setIgnoreReason('')
+        // Mark this date as draft when user opens a menu
+        onMarkDraft(dateKey)
     }
 
-    const handleVerify = () => {
+    // "Verifikasi & Lanjutkan" — show confirmation first
+    const handleVerifyClick = () => {
+        setShowConfirm(true)
+    }
+
+    const handleVerifyConfirm = () => {
+        setShowConfirm(false)
         setStep(2)
     }
 
@@ -392,187 +427,197 @@ function NutritionModal({ dateKey, menusOnDate, onClose }) {
     }
 
     return (
-        <div
-            ref={backdropRef}
-            onClick={handleBackdrop}
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)' }}
-        >
+        <>
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full mx-4 overflow-hidden flex flex-col"
-                style={{ maxWidth: '760px', maxHeight: '90vh' }}
-                onClick={e => e.stopPropagation()}
+                ref={backdropRef}
+                onClick={handleBackdrop}
+                className="fixed inset-0 z-50 flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)' }}
             >
-                {/* Modal Header */}
-                <div style={{ backgroundColor: '#327169' }} className="flex items-center justify-between px-6 py-4 shrink-0">
-                    <div className="flex items-center gap-3 text-white">
-                        <FlaskConical size={20} />
-                        <div>
-                            <p className="font-extrabold text-sm leading-tight">Input Fakta Nutrisi</p>
-                            <p className="text-white/70 text-xs mt-0.5">{formatDateLabel(dateKey)}</p>
+                <div
+                    className="bg-white rounded-2xl shadow-2xl w-full mx-4 overflow-hidden flex flex-col"
+                    style={{ maxWidth: '760px', maxHeight: '90vh' }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* Modal Header */}
+                    <div style={{ backgroundColor: '#327169' }} className="flex items-center justify-between px-6 py-4 shrink-0">
+                        <div className="flex items-center gap-3 text-white">
+                            <FlaskConical size={20} />
+                            <div>
+                                <p className="font-extrabold text-sm leading-tight">Input Fakta Nutrisi</p>
+                                <p className="text-white/70 text-xs mt-0.5">{formatDateLabel(dateKey)}</p>
+                            </div>
                         </div>
+                        <button onClick={onClose} className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+                            <X size={18} />
+                        </button>
                     </div>
-                    <button onClick={onClose} className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                        <X size={18} />
-                    </button>
-                </div>
 
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-6 flex flex-col min-h-0">
-                    <StepIndicator step={step} />
+                    {/* Body */}
+                    <div className="flex-1 overflow-y-auto p-6 flex flex-col min-h-0">
+                        <StepIndicator step={step} />
 
-                    {/* STEP 1 ─────────────────────────────────────── */}
-                    {step === 1 && (
-                        <div className="flex flex-col gap-4 flex-1">
-                            {/* Completed menus */}
-                            {doneMenus.length > 0 && (
-                                <div className="space-y-1.5">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#4d4d4d]/40">Sudah Diproses</p>
-                                    {doneMenus.map(m => (
-                                        <div key={m.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
-                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${m.stages.nutritionist_review?.status === 'done' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                                                {m.stages.nutritionist_review?.status === 'done' ? '✓ Terverifikasi' : '✗ Diabaikan'}
-                                            </span>
-                                            <span className="text-sm font-semibold text-[#4d4d4d]/70">{m.name}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Pending menus */}
-                            {pendingMenus.length === 0 && (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
-                                    <CheckCircle2 size={36} className="text-[#a3c7c7] mb-2" />
-                                    <p className="text-[#4d4d4d]/60 text-sm">Semua menu pada tanggal ini sudah diproses.</p>
-                                </div>
-                            )}
-
-                            {pendingMenus.length > 0 && (
-                                <>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#4d4d4d]/40">Pilih Menu untuk Diverifikasi</p>
-                                    <div className="grid gap-2">
-                                        {pendingMenus.map(m => (
-                                            <button
-                                                key={m.id}
-                                                onClick={() => handleSelectMenu(m)}
-                                                className={[
-                                                    'w-full p-4 rounded-xl border-2 text-left transition-all',
-                                                    selectedMenu?.id === m.id
-                                                        ? 'border-[#327169] bg-[#327169]/5'
-                                                        : 'border-gray-200 hover:border-[#438c81] hover:bg-[#f0fafa]',
-                                                ].join(' ')}
-                                            >
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-bold text-sm text-[#327169] truncate">{m.name}</p>
-                                                        {m.description && <p className="text-xs text-[#4d4d4d]/55 mt-0.5 line-clamp-1">{m.description}</p>}
-                                                    </div>
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">Menunggu</span>
-                                                </div>
-                                                <p className="text-xs text-[#4d4d4d]/50 mt-1.5">{m.ingredients.length} bahan dari Head Chef</p>
-                                            </button>
+                        {/* STEP 1 */}
+                        {step === 1 && (
+                            <div className="flex flex-col gap-4 flex-1">
+                                {doneMenus.length > 0 && (
+                                    <div className="space-y-1.5">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#4d4d4d]/40">Sudah Diproses</p>
+                                        {doneMenus.map(m => (
+                                            <div key={m.id} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
+                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${m.stages.nutritionist_review?.status === 'done' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                                                    {m.stages.nutritionist_review?.status === 'done' ? '✓ Terverifikasi' : '✗ Diabaikan'}
+                                                </span>
+                                                <span className="text-sm font-semibold text-[#4d4d4d]/70">{m.name}</span>
+                                            </div>
                                         ))}
                                     </div>
+                                )}
 
-                                    {/* Detail panel when menu is selected */}
-                                    {selectedMenu && (
-                                        <div className="rounded-xl border border-[#a3c7c7]/50 bg-[#f7fdfd] p-4 space-y-3">
-                                            <p className="text-xs font-bold uppercase tracking-wide text-[#4d4d4d]/45">Daftar Bahan dari Head Chef</p>
-                                            {selectedMenu.ingredients.length === 0 ? (
-                                                <p className="text-sm text-gray-400 italic text-center py-3">Belum ada bahan yang di-mapping</p>
-                                            ) : (
-                                                <table className="w-full text-sm">
-                                                    <thead>
-                                                        <tr>
-                                                            <th className="text-left text-[10px] font-bold uppercase tracking-wide text-[#4d4d4d]/40 pb-1.5">Bahan</th>
-                                                            <th className="text-right text-[10px] font-bold uppercase tracking-wide text-[#4d4d4d]/40 pb-1.5">Qty</th>
-                                                            <th className="text-right text-[10px] font-bold uppercase tracking-wide text-[#4d4d4d]/40 pb-1.5">Satuan</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-gray-100">
-                                                        {selectedMenu.ingredients.map((ing, i) => (
-                                                            <tr key={i}>
-                                                                <td className="py-1.5 font-semibold text-[#4d4d4d]">{ing.name}</td>
-                                                                <td className="py-1.5 text-right font-bold text-[#327169]">{ing.quantity}</td>
-                                                                <td className="py-1.5 text-right text-[#4d4d4d]/55">{ing.unit}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            )}
+                                {pendingMenus.length === 0 && (
+                                    <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+                                        <CheckCircle2 size={36} className="text-[#a3c7c7] mb-2" />
+                                        <p className="text-[#4d4d4d]/60 text-sm">Semua menu pada tanggal ini sudah diproses.</p>
+                                    </div>
+                                )}
 
-                                            {/* Ignore form */}
-                                            {showIgnoreForm && (
-                                                <div className="mt-2 p-3 rounded-xl border-2 border-red-200 bg-red-50">
-                                                    <div className="flex items-center gap-1.5 mb-2">
-                                                        <AlertTriangle size={14} className="text-red-500" />
-                                                        <p className="text-xs font-bold text-red-700">Alasan Penolakan (wajib)</p>
+                                {pendingMenus.length > 0 && (
+                                    <>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#4d4d4d]/40">Pilih Menu untuk Diverifikasi</p>
+                                        <div className="grid gap-2">
+                                            {pendingMenus.map(m => (
+                                                <button
+                                                    key={m.id}
+                                                    onClick={() => handleSelectMenu(m)}
+                                                    className={[
+                                                        'w-full p-4 rounded-xl border-2 text-left transition-all',
+                                                        selectedMenu?.id === m.id
+                                                            ? 'border-[#327169] bg-[#327169]/5'
+                                                            : 'border-gray-200 hover:border-[#438c81] hover:bg-[#f0fafa]',
+                                                    ].join(' ')}
+                                                >
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-bold text-sm text-[#327169] truncate">{m.name}</p>
+                                                            {m.description && <p className="text-xs text-[#4d4d4d]/55 mt-0.5 line-clamp-1">{m.description}</p>}
+                                                        </div>
+                                                        {/* Status icon on menu row */}
+                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0 flex items-center gap-1">
+                                                            <AlertCircle size={9} /> Menunggu
+                                                        </span>
                                                     </div>
-                                                    <textarea
-                                                        value={ignoreReason}
-                                                        onChange={e => setIgnoreReason(e.target.value)}
-                                                        rows={3}
-                                                        placeholder="Tuliskan alasan mengapa daftar bahan ini perlu direvisi..."
-                                                        className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 mb-2 resize-none"
-                                                    />
-                                                    <div className="flex gap-2">
-                                                        <button onClick={handleIgnoreSubmit}
-                                                            className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">
-                                                            Konfirmasi Tolak
-                                                        </button>
-                                                        <button onClick={() => { setShowIgnoreForm(false); setIgnoreReason('') }}
-                                                            className="flex-1 py-1.5 rounded-lg text-xs font-bold border border-gray-200 text-[#4d4d4d] hover:bg-gray-50 transition-colors">
-                                                            Batal
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Action buttons */}
-                                            {!showIgnoreForm && (
-                                                <div className="flex gap-3 pt-1">
-                                                    <button
-                                                        onClick={handleVerify}
-                                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-                                                        style={{ backgroundColor: '#327169' }}
-                                                    >
-                                                        <Check size={16} /> Verifikasi & Lanjutkan
-                                                        <ArrowRight size={14} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setShowIgnoreForm(true)}
-                                                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border-2 border-red-300 text-red-500 hover:bg-red-50 transition-all"
-                                                    >
-                                                        <X size={15} /> Abaikan
-                                                    </button>
-                                                </div>
-                                            )}
+                                                    <p className="text-xs text-[#4d4d4d]/50 mt-1.5">{m.ingredients.length} bahan dari Head Chef</p>
+                                                </button>
+                                            ))}
                                         </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    )}
 
-                    {/* STEP 2 ─────────────────────────────────────── */}
-                    {step === 2 && selectedMenu && (
-                        <div className="flex flex-col flex-1 min-h-0">
-                            <div className="mb-4 p-3 rounded-xl bg-[#327169]/8 border border-[#a3c7c7]/40">
-                                <p className="text-xs text-[#4d4d4d]/55">Menu dipilih</p>
-                                <p className="font-bold text-[#327169] text-sm">{selectedMenu.name}</p>
-                                <p className="text-xs text-[#4d4d4d]/55 mt-0.5">Isi fakta nutrisi untuk keseluruhan menu (bukan per bahan).</p>
+                                        {selectedMenu && (
+                                            <div className="rounded-xl border border-[#a3c7c7]/50 bg-[#f7fdfd] p-4 space-y-3">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-[#4d4d4d]/45">Daftar Bahan dari Head Chef</p>
+                                                {selectedMenu.ingredients.length === 0 ? (
+                                                    <p className="text-sm text-gray-400 italic text-center py-3">Belum ada bahan yang di-mapping</p>
+                                                ) : (
+                                                    <table className="w-full text-sm">
+                                                        <thead>
+                                                            <tr>
+                                                                <th className="text-left text-[10px] font-bold uppercase tracking-wide text-[#4d4d4d]/40 pb-1.5">Bahan</th>
+                                                                <th className="text-right text-[10px] font-bold uppercase tracking-wide text-[#4d4d4d]/40 pb-1.5">Qty</th>
+                                                                <th className="text-right text-[10px] font-bold uppercase tracking-wide text-[#4d4d4d]/40 pb-1.5">Satuan</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-gray-100">
+                                                            {selectedMenu.ingredients.map((ing, i) => (
+                                                                <tr key={i}>
+                                                                    <td className="py-1.5 font-semibold text-[#4d4d4d]">{ing.name}</td>
+                                                                    <td className="py-1.5 text-right font-bold text-[#327169]">{ing.quantity}</td>
+                                                                    <td className="py-1.5 text-right text-[#4d4d4d]/55">{ing.unit}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                )}
+
+                                                {showIgnoreForm && (
+                                                    <div className="mt-2 p-3 rounded-xl border-2 border-red-200 bg-red-50">
+                                                        <div className="flex items-center gap-1.5 mb-2">
+                                                            <AlertTriangle size={14} className="text-red-500" />
+                                                            <p className="text-xs font-bold text-red-700">Alasan Penolakan (wajib)</p>
+                                                        </div>
+                                                        <textarea
+                                                            value={ignoreReason}
+                                                            onChange={e => setIgnoreReason(e.target.value)}
+                                                            rows={3}
+                                                            placeholder="Tuliskan alasan mengapa daftar bahan ini perlu direvisi..."
+                                                            className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 mb-2 resize-none"
+                                                        />
+                                                        <div className="flex gap-2">
+                                                            <button onClick={handleIgnoreSubmit}
+                                                                className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors">
+                                                                Konfirmasi Tolak
+                                                            </button>
+                                                            <button onClick={() => { setShowIgnoreForm(false); setIgnoreReason('') }}
+                                                                className="flex-1 py-1.5 rounded-lg text-xs font-bold border border-gray-200 text-[#4d4d4d] hover:bg-gray-50 transition-colors">
+                                                                Batal
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {!showIgnoreForm && (
+                                                    <div className="flex gap-3 pt-1">
+                                                        {/* Verifikasi now triggers ConfirmationModal */}
+                                                        <button
+                                                            onClick={handleVerifyClick}
+                                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                                                            style={{ backgroundColor: '#327169' }}
+                                                        >
+                                                            <Check size={16} /> Verifikasi & Lanjutkan
+                                                            <ArrowRight size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setShowIgnoreForm(true)}
+                                                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold border-2 border-red-300 text-red-500 hover:bg-red-50 transition-all"
+                                                        >
+                                                            <X size={15} /> Abaikan
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
-                            <NutritionForm
-                                facts={facts}
-                                onChange={setFacts}
-                                onSave={handleSaveFacts}
-                                onBack={() => setStep(1)}
-                            />
-                        </div>
-                    )}
+                        )}
+
+                        {/* STEP 2 */}
+                        {step === 2 && selectedMenu && (
+                            <div className="flex flex-col flex-1 min-h-0">
+                                <div className="mb-4 p-3 rounded-xl bg-[#327169]/8 border border-[#a3c7c7]/40">
+                                    <p className="text-xs text-[#4d4d4d]/55">Menu dipilih</p>
+                                    <p className="font-bold text-[#327169] text-sm">{selectedMenu.name}</p>
+                                    <p className="text-xs text-[#4d4d4d]/55 mt-0.5">Isi fakta nutrisi untuk keseluruhan menu (bukan per bahan).</p>
+                                </div>
+                                <NutritionForm
+                                    facts={facts}
+                                    onChange={setFacts}
+                                    onSave={handleSaveFacts}
+                                    onBack={() => setStep(1)}
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {/* Confirmation popup */}
+            <ConfirmationModal
+                isOpen={showConfirm}
+                message="Apakah Anda yakin ingin memverifikasi daftar bahan ini dan melanjutkan ke input fakta nutrisi?"
+                confirmLabel="Ya, Verifikasi"
+                onConfirm={handleVerifyConfirm}
+                onCancel={() => setShowConfirm(false)}
+            />
+        </>
     )
 }
 
@@ -584,6 +629,8 @@ export default function NutritionistVerificationPage() {
     const today = new Date()
     const [currentDate, setCurrentDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
     const [selectedDateKey, setSelectedDateKey] = useState(null)
+    // Track dates that have been opened (draft state)
+    const [draftDates, setDraftDates] = useState(new Set())
 
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
@@ -592,10 +639,18 @@ export default function NutritionistVerificationPage() {
     const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1))
     const goToday = () => setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1))
 
+    const markDraft = (dateKey) => {
+        setDraftDates(prev => {
+            const next = new Set(prev)
+            next.add(dateKey)
+            return next
+        })
+    }
+
     // Build calendar grid
     const calendarCells = useMemo(() => {
         const firstDay = new Date(year, month, 1).getDay()
-        const startOffset = (firstDay + 6) % 7 // Mon-based
+        const startOffset = (firstDay + 6) % 7
         const daysInMonth = new Date(year, month + 1, 0).getDate()
         const daysInPrevMonth = new Date(year, month, 0).getDate()
         const cells = []
@@ -613,7 +668,6 @@ export default function NutritionistVerificationPage() {
         return cells
     }, [year, month])
 
-    // Menus that have an active nutritionist_review stage
     const menusByDate = useMemo(() => {
         const map = {}
         for (const m of menus) {
@@ -628,13 +682,16 @@ export default function NutritionistVerificationPage() {
 
     const todayKey = toDateKey(today.getFullYear(), today.getMonth(), today.getDate())
 
-    // Monthly stats
     const monthlyMenus = menus.filter(m => {
         const [py, pm] = (m.targetDate || '').split('-').map(Number)
         return py === year && pm === month + 1
     })
     const pendingThisMonth = monthlyMenus.filter(m => m.stages.nutritionist_review?.status === 'active').length
     const doneThisMonth = monthlyMenus.filter(m => m.stages.nutritionist_review?.status === 'done').length
+    const draftCount = [...draftDates].filter(dk => {
+        const [py, pm] = dk.split('-').map(Number)
+        return py === year && pm === month + 1
+    }).length
 
     const menusForModal = selectedDateKey ? (menusByDate[selectedDateKey] || []) : []
 
@@ -656,6 +713,11 @@ export default function NutritionistVerificationPage() {
                     <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full text-xs font-bold border border-amber-200">
                         <AlertCircle size={12} /> {pendingThisMonth} Menunggu
                     </div>
+                    {draftCount > 0 && (
+                        <div className="flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full text-xs font-bold border border-slate-200">
+                            <Clock size={12} /> {draftCount} Draft
+                        </div>
+                    )}
                     <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-xs font-bold border border-green-200">
                         <CheckCircle2 size={12} /> {doneThisMonth} Terverifikasi
                     </div>
@@ -697,6 +759,7 @@ export default function NutritionistVerificationPage() {
                             isToday={dateKey === todayKey}
                             isCurrentMonth={isCurrentMonth}
                             menusOnDate={isCurrentMonth ? (menusByDate[dateKey] || []) : []}
+                            draftDates={draftDates}
                             onClick={() => setSelectedDateKey(dateKey)}
                         />
                     ))}
@@ -705,10 +768,13 @@ export default function NutritionistVerificationPage() {
                 {/* Legend */}
                 <div className="px-4 py-2 border-t border-gray-100 flex items-center gap-4 flex-wrap shrink-0">
                     <div className="flex items-center gap-1.5 text-[10px] text-[#4d4d4d]/60">
-                        <span className="w-2.5 h-2.5 rounded-full inline-block bg-amber-400" /> Menu Menunggu Verifikasi
+                        <span className="w-2.5 h-2.5 rounded-full inline-block bg-amber-400" /> Belum Disentuh
                     </div>
                     <div className="flex items-center gap-1.5 text-[10px] text-[#4d4d4d]/60">
-                        <span className="w-2.5 h-2.5 rounded-full inline-block bg-green-500" /> Sudah Terverifikasi
+                        <span className="w-2.5 h-2.5 rounded-full inline-block bg-slate-400" /> In Draft
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] text-[#4d4d4d]/60">
+                        <span className="w-2.5 h-2.5 rounded-full inline-block bg-green-500" /> Final
                     </div>
                     <p className="text-[10px] text-[#4d4d4d]/40 ml-auto">
                         Klik tanggal berwarna untuk verifikasi & input nutrisi
@@ -722,6 +788,7 @@ export default function NutritionistVerificationPage() {
                     dateKey={selectedDateKey}
                     menusOnDate={menusForModal}
                     onClose={() => setSelectedDateKey(null)}
+                    onMarkDraft={markDraft}
                 />
             )}
         </div>

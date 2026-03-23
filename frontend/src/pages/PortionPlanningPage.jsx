@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import {
     ChevronLeft, ChevronRight, Plus, X, Edit2, Trash2,
-    Save, Clock, Users, Calculator, CheckCircle,
+    Save, Clock, Users, Calculator, CheckCircle, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { DEMO_SCHOOLS } from '../lib/constants'
 import { usePortionPlanningStore } from '../store/portionPlanningStore'
+import ConfirmationModal from '../components/ConfirmationModal'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,21 +54,25 @@ function CalendarCell({ day, dateKey, isToday, isCurrentMonth, plansOnDate, onCl
     const totalPortions = plansOnDate.reduce((s, p) => s + Number(p.portionCount), 0)
     const schoolCount = plansOnDate.length
 
+    // Status: 0 plans = default, 1+ plans = 'draft' (⏳), all finalized = treated as final
+    const status = schoolCount > 0 ? (schoolCount >= 3 ? 'final' : 'draft') : null
+
+    const borderColor = status === 'final' ? '#86efac' : status === 'draft' ? '#a3c7c7' : '#e5e7eb'
+    const bgColor = status === 'final' ? '#f0fdf4' : status === 'draft' ? '#f7fdfd' : '#fff'
+
     return (
         <div
             onClick={isCurrentMonth ? onClick : undefined}
             className={[
                 'relative flex flex-col gap-0.5 rounded-xl p-1.5 min-h-[90px] transition-all duration-150 select-none border',
                 isCurrentMonth
-                    ? 'cursor-pointer hover:shadow-md hover:border-[#438c81]'
+                    ? 'cursor-pointer hover:shadow-md'
                     : 'opacity-30 cursor-default',
                 isToday
-                    ? 'border-[#a3c7c7] bg-[#a3c7c7]/20 ring-2 ring-[#a3c7c7]/50'
-                    : 'border-transparent bg-white hover:bg-[#f0fafa]',
-                plansOnDate.length > 0 && isCurrentMonth && !isToday
-                    ? 'bg-[#f7fdfd]'
+                    ? 'ring-2 ring-[#a3c7c7]/50'
                     : '',
             ].join(' ')}
+            style={{ borderColor: isToday ? '#a3c7c7' : borderColor, backgroundColor: isToday ? 'rgba(163,199,199,0.15)' : bgColor }}
         >
             {/* Day number */}
             <span
@@ -98,10 +103,12 @@ function CalendarCell({ day, dateKey, isToday, isCurrentMonth, plansOnDate, onCl
 
             {/* Summary footer */}
             {schoolCount > 0 && (
-                <div className="mt-auto pt-0.5">
+                <div className="mt-auto pt-0.5 flex items-end justify-between">
                     <p className="text-[9px] font-semibold text-[#327169] leading-tight truncate">
                         {schoolCount} PM · {totalPortions.toLocaleString('id-ID')} porsi
                     </p>
+                    {status === 'final' && <CheckCircle2 size={11} className="text-green-500 shrink-0" />}
+                    {status === 'draft' && <Clock size={11} className="text-[#438c81] shrink-0" />}
                 </div>
             )}
         </div>
@@ -114,15 +121,18 @@ const EMPTY_FORM = { schoolId: '', portionCount: '', arrivalTime: '' }
 
 function EntryForm({ initial, onSave, onCancel }) {
     const [form, setForm] = useState(initial ?? EMPTY_FORM)
-    const [schools, setSchools] = useState(DEMO_SCHOOLS)
-
-    // Try to load schools that may have been added in BeneficiaryManagementPage
-    // (they live in local component state there, so we fall back to DEMO_SCHOOLS)
+    const [schools] = useState(DEMO_SCHOOLS)
+    const [showConfirm, setShowConfirm] = useState(false)
 
     const isValid = form.schoolId !== '' && Number(form.portionCount) > 0
 
-    const handleSave = () => {
+    const handleSaveClick = () => {
         if (!isValid) return
+        setShowConfirm(true)
+    }
+
+    const handleConfirmedSave = () => {
+        setShowConfirm(false)
         onSave({
             schoolId: Number(form.schoolId),
             portionCount: Number(form.portionCount),
@@ -131,6 +141,7 @@ function EntryForm({ initial, onSave, onCancel }) {
     }
 
     return (
+        <>
         <div className="bg-[#f7fdfd] rounded-xl border border-[#a3c7c7]/40 p-4 space-y-3 mt-2">
             {/* Select PM */}
             <div>
@@ -176,7 +187,7 @@ function EntryForm({ initial, onSave, onCancel }) {
             {/* Actions */}
             <div className="flex gap-2 pt-1">
                 <button
-                    onClick={handleSave}
+                    onClick={handleSaveClick}
                     disabled={!isValid}
                     style={{ backgroundColor: isValid ? '#438c81' : undefined }}
                     className={`btn-primary text-xs py-1.5 px-4 ${!isValid ? 'opacity-40 cursor-not-allowed' : ''}`}
@@ -191,6 +202,14 @@ function EntryForm({ initial, onSave, onCancel }) {
                 </button>
             </div>
         </div>
+        <ConfirmationModal
+            isOpen={showConfirm}
+            message="Apakah Anda yakin ingin menyimpan rencana porsi ini?"
+            confirmLabel="Ya, Simpan"
+            onConfirm={handleConfirmedSave}
+            onCancel={() => setShowConfirm(false)}
+        />
+        </>
     )
 }
 

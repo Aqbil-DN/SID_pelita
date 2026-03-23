@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react'
-import { Plus, Save, UtensilsCrossed, Calendar, ChevronLeft, ChevronRight, X, Trash2, CheckSquare, Square, Pencil, Check } from 'lucide-react'
+import { Plus, Save, UtensilsCrossed, Calendar, ChevronLeft, ChevronRight, X, Trash2, CheckSquare, Square, Pencil, Check, AlertCircle, Clock, CheckCircle2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import useAuthStore from '../store/authStore'
 import useWorkflowStore from '../store/workflowStore'
 import { DEMO_BENEFICIARIES, DEMO_SCHOOLS } from '../lib/constants'
 import clsx from 'clsx'
+import ConfirmationModal from '../components/ConfirmationModal'
 
 const DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 
@@ -93,11 +94,14 @@ export default function MenuPlanningPage() {
     const { menus, addMenu, deleteMenu, updateMenu } = useWorkflowStore()
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth())
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
+    // Modal-first: null = closed, string = open for this date
+    const [modalDate, setModalDate] = useState(null)
     const [selectedDate, setSelectedDate] = useState(null)
 
     const [selectedPMs, setSelectedPMs] = useState([])
     const [menuRows, setMenuRows] = useState([EMPTY_ROW()])
     const [plannedPMs, setPlannedPMs] = useState({})
+    const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
 
     // Edit / Delete states
     const [editMenu, setEditMenu] = useState(null)
@@ -137,10 +141,17 @@ export default function MenuPlanningPage() {
         return allPMs.every(pm => planned.has(pm.id) || storePlanned.has(pm.id))
     }, [selectedDate, allPMs, plannedPMs, menus])
 
-    const handleBulkSubmit = () => {
+    // Show confirm before submitting
+    const handleBulkSubmitClick = () => {
         const validRows = menuRows.filter(r => r.name.trim())
         if (validRows.length === 0) { toast.error('Tambahkan minimal 1 menu!'); return }
         if (selectedPMs.length === 0) { toast.error('Pilih minimal 1 Penerima Manfaat!'); return }
+        setShowSubmitConfirm(true)
+    }
+
+    const handleBulkSubmit = () => {
+        setShowSubmitConfirm(false)
+        const validRows = menuRows.filter(r => r.name.trim())
         let count = 0
         selectedPMs.forEach(pmId => {
             validRows.forEach(row => {
@@ -179,7 +190,24 @@ export default function MenuPlanningPage() {
         return menus.filter(m => m.targetDate === dateStr).length
     }
 
-    const handleDateSelect = (dateStr) => { setSelectedDate(dateStr); setSelectedPMs([]); setMenuRows([EMPTY_ROW()]) }
+    const getDayStatus = (day) => {
+        const dateStr = formatDate(currentYear, currentMonth, day)
+        const count = menus.filter(m => m.targetDate === dateStr).length
+        const planned = plannedPMs[dateStr]
+        if (count === 0 && (!planned || planned.size === 0)) return null
+        // Check if any PM on this day is planned (has menus)
+        const allPMsForDay = DEMO_BENEFICIARIES.length
+        if (planned && planned.size >= allPMsForDay) return 'final'
+        if (count > 0) return 'draft'
+        return 'untouched'
+    }
+
+    const handleDateSelect = (dateStr) => {
+        setSelectedDate(dateStr)
+        setSelectedPMs([])
+        setMenuRows([EMPTY_ROW()])
+        setModalDate(dateStr)
+    }
 
     // Edit menu handler
     const handleEditSave = (updates) => {
@@ -196,117 +224,123 @@ export default function MenuPlanningPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto space-y-6">
             <div>
                 <h2 className="text-2xl font-extrabold text-primary flex items-center gap-2"><UtensilsCrossed size={24} /> Menu Planning</h2>
-                <p className="text-sm text-tertiary/60 mt-1">Pilih tanggal → Pilih PM → Input Menu (bulk) → Submit</p>
+                <p className="text-sm text-tertiary/60 mt-1">Klik tanggal di kalender untuk merencanakan menu</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Calendar */}
-                <div className="lg:col-span-2 card">
-                    <div className="flex items-center justify-between mb-4">
-                        <button onClick={prevMonth} className="btn-secondary p-2"><ChevronLeft size={18} /></button>
-                        <h3 className="text-lg font-bold text-primary">
-                            {new Date(currentYear, currentMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
-                        </h3>
-                        <button onClick={nextMonth} className="btn-secondary p-2"><ChevronRight size={18} /></button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 mb-2">
-                        {DAYS.map(d => <div key={d} className="text-center text-xs font-bold uppercase tracking-wide text-tertiary/50 py-2">{d}</div>)}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                        {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
-                        {Array.from({ length: daysInMonth }).map((_, i) => {
-                            const day = i + 1
-                            const dateStr = formatDate(currentYear, currentMonth, day)
-                            const count = getMenuCountForDay(day)
-                            const isSelected = selectedDate === dateStr
-                            return (
-                                <button key={day} onClick={() => handleDateSelect(dateStr)}
-                                    className={clsx('relative p-3 rounded-xl text-sm font-semibold transition-all border',
-                                        isSelected ? 'bg-primary text-white border-primary shadow-lg'
-                                            : count > 0 ? 'bg-accent-light/50 text-primary border-accent hover:bg-accent-light'
-                                                : 'bg-white text-tertiary border-gray-100 hover:border-accent hover:bg-gray-50')}>
-                                    {day}
-                                    {count > 0 && <span className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center text-[10px] font-bold rounded-full bg-primary text-white">{count}</span>}
-                                </button>
-                            )
-                        })}
-                    </div>
+            {/* Full-width Calendar */}
+            <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                    <button onClick={prevMonth} className="btn-secondary p-2"><ChevronLeft size={18} /></button>
+                    <h3 className="text-lg font-bold text-primary">{new Date(currentYear, currentMonth).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</h3>
+                    <button onClick={nextMonth} className="btn-secondary p-2"><ChevronRight size={18} /></button>
                 </div>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                    {DAYS.map(d => <div key={d} className="text-center text-xs font-bold uppercase tracking-wide text-tertiary/50 py-2">{d}</div>)}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const day = i + 1
+                        const dateStr = formatDate(currentYear, currentMonth, day)
+                        const count = getMenuCountForDay(day)
+                        const status = getDayStatus(day)
+                        const isToday = dateStr === new Date().toISOString().split('T')[0]
 
-                {/* Right panel */}
-                <div className="space-y-4">
-                    {selectedDate ? (
-                        <>
-                            <div className="card">
-                                <h3 className="font-bold text-primary text-sm flex items-center gap-2 mb-3">
-                                    <Calendar size={16} />
-                                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                                </h3>
+                        const cellStyle = !status ? 'bg-white text-tertiary/30 border-gray-100'
+                            : status === 'final' ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                            : status === 'draft' ? 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                            : count > 0 ? 'bg-accent-light/50 text-primary border-accent hover:bg-accent-light'
+                            : 'bg-white text-tertiary border-gray-100 hover:border-accent hover:bg-gray-50'
 
-                                {/* Existing menus with Edit/Delete */}
-                                {menusForDate.length > 0 && (
-                                    <div className="mb-4">
-                                        <p className="text-xs font-bold uppercase tracking-wide text-tertiary/50 mb-2">Menu Terdaftar ({menusForDate.length})</p>
-                                        <div className="space-y-1.5">
-                                            {menusForDate.map(m => {
-                                                const benef = DEMO_BENEFICIARIES.find(b => b.id === m.beneficiaryId)
-                                                const school = benef ? DEMO_SCHOOLS.find(s => s.id === benef.schoolId) : null
-                                                return (
-                                                    <div key={m.id} className="p-2.5 rounded-xl border border-gray-100 text-xs flex items-start justify-between gap-2" style={{ backgroundColor: '#fafbfc' }}>
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="font-bold text-primary truncate">{m.name}</p>
-                                                            {school && <p className="text-tertiary/40 mt-0.5 truncate">→ {school.name}</p>}
-                                                        </div>
-                                                        <div className="flex gap-1 flex-shrink-0">
-                                                            <button onClick={() => setEditMenu(m)}
-                                                                className="p-1.5 rounded-lg text-white hover:opacity-80 transition-opacity"
-                                                                style={{ backgroundColor: '#438c81' }}>
-                                                                <Pencil size={11} />
-                                                            </button>
-                                                            <button onClick={() => setDeleteTarget(m)}
-                                                                className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                                                                <Trash2 size={11} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                )
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
+                        return (
+                            <button key={day} onClick={() => handleDateSelect(dateStr)}
+                                className={clsx('relative p-2 rounded-xl text-sm font-semibold transition-all border min-h-[68px] flex flex-col items-start justify-between gap-1 cursor-pointer',
+                                    cellStyle, isToday && 'ring-2 ring-[#327169]/40')}>
+                                <span className={clsx('font-bold text-xs', isToday && 'underline')}>{day}</span>
+                                <div className="flex items-center justify-between w-full">
+                                    {count > 0 && <span className="text-[9px] font-bold">{count} menu</span>}
+                                    {status === 'final' && <CheckCircle2 size={12} className="ml-auto" />}
+                                    {status === 'draft' && <Clock size={12} className="ml-auto" />}
+                                    {!status && count > 0 && <AlertCircle size={12} className="ml-auto text-amber-500" />}
+                                </div>
+                            </button>
+                        )
+                    })}
+                </div>
+                <div className="mt-5 pt-4 border-t flex items-center gap-3 text-xs" style={{ borderColor: '#f3f4f6' }}>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold"><AlertCircle size={10} /> Belum Disentuh</span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-semibold"><Clock size={10} /> In Draft</span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 text-green-700 font-semibold"><CheckCircle2 size={10} /> Final</span>
+                    <p className="ml-auto text-tertiary/40">Klik tanggal untuk input menu</p>
+                </div>
+            </div>
 
-                                {allPMsPlanned && (
-                                    <div className="p-3 rounded-xl text-center mb-3" style={{ backgroundColor: '#dcfce7' }}>
-                                        <p className="text-xs font-bold" style={{ color: '#16a34a' }}>✓ Semua PM sudah memiliki menu</p>
-                                    </div>
-                                )}
+            {/* Date Modal */}
+            {modalDate && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => { setModalDate(null); setSelectedDate(null); setMenuRows([EMPTY_ROW()]); setSelectedPMs([]) }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="shrink-0 px-6 py-4" style={{ backgroundColor: 'rgba(163,199,199,0.12)', borderBottom: '1px solid #e5e7eb' }}>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#438c81' }}>Menu Planning</p>
+                                    <h3 className="text-lg font-extrabold" style={{ color: '#327169' }}>
+                                        {new Date(modalDate + 'T00:00:00').toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                    </h3>
+                                </div>
+                                <button onClick={() => { setModalDate(null); setSelectedDate(null); setMenuRows([EMPTY_ROW()]); setSelectedPMs([]) }} className="p-2 rounded-xl hover:bg-red-50 text-gray-400 hover:text-red-400"><X size={20} /></button>
                             </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                            {/* Existing menus */}
+                            {menusForDate.length > 0 && (
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-tertiary/50 mb-2">Menu Terdaftar ({menusForDate.length})</p>
+                                    <div className="space-y-1.5">
+                                        {menusForDate.map(m => {
+                                            const benef = DEMO_BENEFICIARIES.find(b => b.id === m.beneficiaryId)
+                                            const school = benef ? DEMO_SCHOOLS.find(s => s.id === benef.schoolId) : null
+                                            return (
+                                                <div key={m.id} className="p-2.5 rounded-xl border border-gray-100 text-xs flex items-start justify-between gap-2" style={{ backgroundColor: '#fafbfc' }}>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="font-bold text-primary truncate">{m.name}</p>
+                                                        {school && <p className="text-tertiary/40 mt-0.5 truncate">→ {school.name}</p>}
+                                                    </div>
+                                                    <div className="flex gap-1 shrink-0">
+                                                        <button onClick={() => setEditMenu(m)} className="p-1.5 rounded-lg text-white hover:opacity-80" style={{ backgroundColor: '#438c81' }}><Pencil size={11} /></button>
+                                                        <button onClick={() => setDeleteTarget(m)} className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50"><Trash2 size={11} /></button>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Multi-select PMs */}
-                            <div className="card">
-                                <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
                                     <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#327169' }}>Step 1 — Pilih PM</p>
-                                    <button onClick={selectAllPMs} className="text-[10px] font-bold px-2 py-1 rounded-lg hover:opacity-80 transition-opacity" style={{ backgroundColor: 'rgba(67,140,129,0.1)', color: '#438c81' }}>
+                                    <button onClick={selectAllPMs} className="text-[10px] font-bold px-2 py-1 rounded-lg" style={{ backgroundColor: 'rgba(67,140,129,0.1)', color: '#438c81' }}>
                                         {selectedPMs.length === allPMs.length ? 'Hapus Semua' : 'Pilih Semua'}
                                     </button>
                                 </div>
-                                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                <div className="space-y-1.5 max-h-44 overflow-y-auto">
                                     {allPMs.map(pm => {
                                         const checked = selectedPMs.includes(pm.id)
                                         const planned = isPMPlanned(pm.id)
                                         return (
                                             <button key={pm.id} onClick={() => togglePM(pm.id)}
-                                                className={clsx('w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all border',
+                                                className={clsx('w-full flex items-center gap-3 p-2 rounded-xl text-left transition-all border',
                                                     checked ? 'border-primary bg-accent-light/30' : 'border-gray-100 hover:border-accent hover:bg-gray-50')}>
                                                 {checked ? <CheckSquare size={16} style={{ color: '#327169' }} /> : <Square size={16} className="text-gray-300" />}
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-bold truncate" style={{ color: '#4d4d4d' }}>{pm.school?.name || 'PM'}</p>
                                                     <p className="text-[10px]" style={{ color: 'rgba(77,77,77,0.4)' }}>{pm.portionCount} porsi • {pm.school?.type}</p>
                                                 </div>
-                                                {planned && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>✓</span>}
+                                                {planned && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>✓</span>}
                                             </button>
                                         )
                                     })}
@@ -316,9 +350,9 @@ export default function MenuPlanningPage() {
 
                             {/* Bulk input */}
                             {selectedPMs.length > 0 && (
-                                <div className="card">
-                                    <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#327169' }}>Step 2 — Input Menu (berlaku untuk semua PM)</p>
-                                    <div className="space-y-3">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#327169' }}>Step 2 — Input Menu</p>
+                                    <div className="space-y-2">
                                         {menuRows.map((row, idx) => (
                                             <div key={idx} className="p-3 rounded-xl border" style={{ borderColor: '#e5e7eb', backgroundColor: '#fafbfc' }}>
                                                 <div className="flex items-center justify-between mb-2">
@@ -333,30 +367,27 @@ export default function MenuPlanningPage() {
                                             </div>
                                         ))}
                                     </div>
-                                    <button onClick={addRow} className="w-full mt-3 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-2.5 rounded-xl transition-all hover:opacity-80 text-white" style={{ backgroundColor: '#327169' }}>
+                                    <button onClick={addRow} className="w-full mt-2 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl hover:opacity-80 text-white" style={{ backgroundColor: '#327169' }}>
                                         <Plus size={14} /> Tambah Baris
                                     </button>
                                 </div>
                             )}
+                        </div>
 
-                            {selectedPMs.length > 0 && (
-                                <button onClick={handleBulkSubmit}
+                        {selectedPMs.length > 0 && (
+                            <div className="shrink-0 px-6 py-4 border-t border-gray-100">
+                                <button onClick={handleBulkSubmitClick}
                                     disabled={menuRows.every(r => !r.name.trim())}
                                     className={clsx('w-full inline-flex items-center justify-center gap-2 text-sm font-bold px-4 py-3 rounded-xl transition-all text-white',
                                         menuRows.some(r => r.name.trim()) ? 'hover:opacity-90 shadow-lg' : 'opacity-40 cursor-not-allowed')}
                                     style={{ backgroundColor: '#327169' }}>
-                                    <Save size={16} /> Submit Menu ({menuRows.filter(r => r.name.trim()).length} menu × {selectedPMs.length} PM)
+                                    <Save size={16} /> Submit Menu ({menuRows.filter(r => r.name.trim()).length} × {selectedPMs.length} PM)
                                 </button>
-                            )}
-                        </>
-                    ) : (
-                        <div className="card text-center py-12">
-                            <Calendar size={40} className="mx-auto text-accent mb-3" />
-                            <p className="text-sm text-tertiary/60">Pilih tanggal di kalender untuk mulai</p>
-                        </div>
-                    )}
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {editMenu && <EditMenuModal menu={editMenu} onSave={handleEditSave} onClose={() => setEditMenu(null)} />}
             {deleteTarget && (
@@ -366,6 +397,13 @@ export default function MenuPlanningPage() {
                     onCancel={() => setDeleteTarget(null)}
                 />
             )}
+            <ConfirmationModal
+                isOpen={showSubmitConfirm}
+                message={`Apakah Anda yakin ingin mensubmit ${menuRows.filter(r => r.name.trim()).length} menu untuk ${selectedPMs.length} PM?`}
+                confirmLabel="Ya, Submit"
+                onConfirm={handleBulkSubmit}
+                onCancel={() => setShowSubmitConfirm(false)}
+            />
         </div>
     )
 }

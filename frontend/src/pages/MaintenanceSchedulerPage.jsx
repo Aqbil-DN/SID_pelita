@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { Wrench, Plus, X, Save, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { Wrench, Plus, X, Save, ChevronLeft, ChevronRight, Calendar, Clock, CheckCircle2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { ROLES } from '../lib/constants'
+import ConfirmationModal from '../components/ConfirmationModal'
 
 const DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
 const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
@@ -33,6 +34,7 @@ export default function MaintenanceSchedulerPage() {
     const [showModal, setShowModal] = useState(false)
     const [form, setForm] = useState(defaultModal)
     const [editId, setEditId] = useState(null)
+    const [showConfirm, setShowConfirm] = useState(false)
 
     useEffect(() => { saveEvents(events) }, [events])
 
@@ -59,10 +61,14 @@ export default function MaintenanceSchedulerPage() {
         setShowModal(true)
     }
 
-    const handleSave = () => {
+    const handleSaveClick = () => {
         if (!form.agenda.trim()) { toast.error('Agenda wajib diisi!'); return }
         if (form.startTime >= form.endTime) { toast.error('Waktu selesai harus lebih besar dari waktu mulai!'); return }
+        setShowConfirm(true)
+    }
 
+    const handleSave = () => {
+        setShowConfirm(false)
         if (editId) {
             setEvents(prev => prev.map(e => e.id === editId ? { ...e, ...form } : e))
             toast.success('Jadwal berhasil diperbarui!')
@@ -118,14 +124,18 @@ export default function MaintenanceSchedulerPage() {
                                 key={day}
                                 onClick={() => openNewModal(dateStr)}
                                 className="min-h-[90px] rounded-xl border cursor-pointer transition-all hover:shadow-md hover:border-accent p-1.5 group"
-                                style={{ borderColor: isToday ? '#327169' : '#e5e7eb', backgroundColor: isToday ? 'rgba(50,113,105,0.05)' : '#fff' }}
+                                style={{ borderColor: isToday ? '#327169' : dayEvents.length > 0 ? '#a3c7c7' : '#e5e7eb', backgroundColor: isToday ? 'rgba(50,113,105,0.05)' : dayEvents.length > 0 ? '#f7fdfd' : '#fff' }}
                             >
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="text-sm font-bold px-1.5 py-0.5 rounded-lg"
                                         style={{ color: isToday ? '#fff' : '#4d4d4d', backgroundColor: isToday ? '#327169' : 'transparent' }}>
                                         {day}
                                     </span>
-                                    <Plus size={12} className="opacity-0 group-hover:opacity-60 text-primary transition-opacity" />
+                                    <div className="flex items-center gap-1">
+                                        {dayEvents.length >= 3 && <CheckCircle2 size={11} className="text-green-500" />}
+                                        {dayEvents.length > 0 && dayEvents.length < 3 && <Clock size={11} className="text-[#438c81]" />}
+                                        <Plus size={12} className="opacity-0 group-hover:opacity-60 text-primary transition-opacity" />
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     {dayEvents.slice(0, 3).map(ev => (
@@ -223,13 +233,21 @@ export default function MaintenanceSchedulerPage() {
                                 </button>
                             )}
                             <button onClick={() => setShowModal(false)} className="btn-secondary flex-1 justify-center">Batal</button>
-                            <button onClick={handleSave} className="btn-primary flex-1 justify-center">
+                            <button onClick={handleSaveClick} className="btn-primary flex-1 justify-center">
                                 <Save size={15} /> Simpan
                             </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={showConfirm}
+                message="Apakah Anda yakin ingin menyimpan jadwal maintenance ini?"
+                confirmLabel="Ya, Simpan Jadwal"
+                onConfirm={handleSave}
+                onCancel={() => setShowConfirm(false)}
+            />
         </div>
     )
 }
