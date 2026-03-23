@@ -98,6 +98,14 @@ const useWorkflowStore = create(
                     ),
                 })),
 
+            // ── Nutrition Facts ───────────────────────────────
+            setNutritionFacts: (menuId, facts) =>
+                set((s) => ({
+                    menus: s.menus.map((m) =>
+                        m.id === menuId ? { ...m, nutritionFacts: facts } : m
+                    ),
+                })),
+
             setMaxPrice: (menuId, ingredientIdx, maxPrice) =>
                 set((s) => ({
                     menus: s.menus.map((m) => {

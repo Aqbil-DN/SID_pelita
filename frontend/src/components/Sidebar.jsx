@@ -4,7 +4,7 @@ import {
     LayoutDashboard, GitBranch, UtensilsCrossed, CheckSquare, ListChecks, Activity,
     PackagePlus, BadgeDollarSign, ShoppingCart, PackageSearch, PackageCheck,
     ClipboardCheck, School, Calculator, Timer, Truck, BarChart3, Users,
-    Megaphone, Monitor, X, Wrench, Wallet, ClipboardList
+    Megaphone, Monitor, X, Wrench, Wallet, ClipboardList, FlaskConical, Package2
 } from 'lucide-react'
 import useAuthStore from '../store/authStore'
 import { NAV_ITEMS } from '../lib/constants'
@@ -14,7 +14,7 @@ const iconMap = {
     LayoutDashboard, GitBranch, UtensilsCrossed, CheckSquare, ListChecks, Activity,
     PackagePlus, BadgeDollarSign, ShoppingCart, PackageSearch, PackageCheck,
     ClipboardCheck, School, Calculator, Timer, Truck, BarChart3, Users,
-    Megaphone, Monitor, Wrench, Wallet, ClipboardList,
+    Megaphone, Monitor, Wrench, Wallet, ClipboardList, FlaskConical, Package2,
 }
 
 export default function Sidebar({ isOpen, setIsOpen }) {

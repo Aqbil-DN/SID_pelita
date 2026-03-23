@@ -11,6 +11,7 @@ import { ROLES } from './lib/constants'
 import MenuPlanningPage from './pages/MenuPlanningPage'
 import NutritionistVerificationPage from './pages/NutritionistVerificationPage'
 import RecapMenuVerifyPage from './pages/RecapMenuVerifyPage'
+import ProductionRequirementPage from './pages/ProductionRequirementPage'
 
 // Head Chef
 import IngredientMappingPage from './pages/IngredientMappingPage'
@@ -78,6 +79,7 @@ export default function App() {
                 <Route path="/menu-planning" element={<PrivateRoute allowedRoles={[ROLES.NUTRITIONIST]}><MenuPlanningPage /></PrivateRoute>} />
                 <Route path="/nutritionist-verify" element={<PrivateRoute allowedRoles={[ROLES.NUTRITIONIST]}><NutritionistVerificationPage /></PrivateRoute>} />
                 <Route path="/recap-menu-verify" element={<PrivateRoute allowedRoles={[ROLES.NUTRITIONIST]}><RecapMenuVerifyPage /></PrivateRoute>} />
+                <Route path="/production-requirement" element={<PrivateRoute allowedRoles={[ROLES.NUTRITIONIST]}><ProductionRequirementPage /></PrivateRoute>} />
 
                 {/* Head Chef */}
                 <Route path="/ingredient-mapping" element={<PrivateRoute allowedRoles={[ROLES.HEAD_CHEF]}><IngredientMappingPage /></PrivateRoute>} />

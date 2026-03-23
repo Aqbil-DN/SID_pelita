@@ -79,8 +79,9 @@ export const NAV_ITEMS = [
 
     // Nutritionist
     { key: 'menu-planning', label: 'Menu Planning', path: '/menu-planning', icon: 'UtensilsCrossed', roles: [ROLES.NUTRITIONIST] },
-    { key: 'nutritionist-verify', label: 'Verifikasi Bahan', path: '/nutritionist-verify', icon: 'CheckSquare', roles: [ROLES.NUTRITIONIST] },
+    { key: 'nutritionist-verify', label: 'Input Fakta Nutrisi', path: '/nutritionist-verify', icon: 'FlaskConical', roles: [ROLES.NUTRITIONIST] },
     { key: 'recap-menu-verify', label: 'Recap Menu Verify', path: '/recap-menu-verify', icon: 'ClipboardList', roles: [ROLES.NUTRITIONIST] },
+    { key: 'production-requirement', label: 'Rancang Kebutuhan Bahan Baku', path: '/production-requirement', icon: 'Package2', roles: [ROLES.NUTRITIONIST] },
 
     // Head Chef
     { key: 'ingredient-mapping', label: 'Ingredient Mapping', path: '/ingredient-mapping', icon: 'ListChecks', roles: [ROLES.HEAD_CHEF] },
